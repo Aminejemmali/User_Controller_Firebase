@@ -5,8 +5,33 @@ import 'package:user_crud/screens/add_user_screen.dart';
 import 'package:user_crud/screens/edit_user_screen.dart';
 
 class UserListScreen extends StatelessWidget {
-  Future<void> _deleteUser(String userId) async {
-    await FirebaseFirestore.instance.collection('users').doc(userId).delete();
+  Future<void> _deleteUser(BuildContext context, String userId) async {
+    final confirm = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete this user?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(false);
+            },
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(true);
+            },
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm) {
+      await FirebaseFirestore.instance.collection('users').doc(userId).delete();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('User deleted successfully')));
+    }
   }
 
   @override
@@ -39,32 +64,39 @@ class UserListScreen extends StatelessWidget {
           final users = userDocs.map((doc) => User.fromDocument(doc)).toList();
 
           return ListView.builder(
+            padding: EdgeInsets.all(8.0),
             itemCount: users.length,
             itemBuilder: (context, index) {
               final user = users[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: NetworkImage(user.avatarUrl),
-                ),
-                title: Text(user.name),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => EditUserScreen(user: user),
-                          ),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () => _deleteUser(user.id),
-                    ),
-                  ],
+              return Card(
+                margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: NetworkImage(user.avatarUrl),
+                  ),
+                  title: Text(
+                    user.name,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => EditUserScreen(user: user),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _deleteUser(context, user.id),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
