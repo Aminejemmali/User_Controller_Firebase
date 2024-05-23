@@ -12,9 +12,10 @@ class AddUserScreen extends StatefulWidget {
 
 class _AddUserScreenState extends State<AddUserScreen> {
   final _nameController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
   File? _image;
-  bool _isLoading = false;
   final picker = ImagePicker();
+  bool _isLoading = false;
 
   Future<void> _pickImage() async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -26,36 +27,32 @@ class _AddUserScreenState extends State<AddUserScreen> {
   }
 
   Future<void> _addUser() async {
-    if (_nameController.text.isEmpty || _image == null) return;
+    if (_nameController.text.isEmpty || _phoneNumberController.text.isEmpty || _image == null) return;
 
     setState(() {
       _isLoading = true;
     });
 
-    try {
-      // Upload image to Firebase Storage
-      final storageRef = FirebaseStorage.instance.ref().child('avatars/${DateTime.now().toIso8601String()}');
-      final uploadTask = storageRef.putFile(_image!);
-      final snapshot = await uploadTask;
-      final avatarUrl = await snapshot.ref.getDownloadURL();
+    // Upload image to Firebase Storage
+    final storageRef = FirebaseStorage.instance.ref().child('avatars/${DateTime.now().toIso8601String()}');
+    final uploadTask = storageRef.putFile(_image!);
+    final snapshot = await uploadTask;
+    final avatarUrl = await snapshot.ref.getDownloadURL();
 
-      // Add user to Firestore
-      final newUser = User(
-        id: '',
-        name: _nameController.text,
-        avatarUrl: avatarUrl,
-      );
-      await FirebaseFirestore.instance.collection('users').add(newUser.toMap());
+    // Add user to Firestore
+    final newUser = User(
+      id: '',
+      name: _nameController.text,
+      avatarUrl: avatarUrl,
+      phoneNumber: _phoneNumberController.text,
+    );
+    await FirebaseFirestore.instance.collection('users').add(newUser.toMap());
 
-      Navigator.of(context).pop();
-    } catch (e) {
-      print('Error adding user: $e');
-      // Show error message to the user
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    setState(() {
+      _isLoading = false;
+    });
+
+    Navigator.of(context).pop();
   }
 
   @override
@@ -72,16 +69,18 @@ class _AddUserScreenState extends State<AddUserScreen> {
               controller: _nameController,
               decoration: InputDecoration(labelText: 'Name'),
             ),
+            TextField(
+              controller: _phoneNumberController,
+              decoration: InputDecoration(labelText: 'Phone Number'),
+            ),
             SizedBox(height: 16),
             _image == null
                 ? Text('No image selected.')
                 : Image.file(_image!),
-            SizedBox(height: 16),
             ElevatedButton(
               onPressed: _pickImage,
               child: Text('Pick Image'),
             ),
-            SizedBox(height: 16),
             _isLoading
                 ? CircularProgressIndicator()
                 : ElevatedButton(

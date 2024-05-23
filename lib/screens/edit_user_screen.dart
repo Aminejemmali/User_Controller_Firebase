@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:user_crud/models/user.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:user_crud/models/user.dart';
 
 class EditUserScreen extends StatefulWidget {
   final User user;
@@ -16,14 +16,16 @@ class EditUserScreen extends StatefulWidget {
 
 class _EditUserScreenState extends State<EditUserScreen> {
   final _nameController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
   File? _image;
-  bool _isLoading = false;
   final picker = ImagePicker();
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _nameController.text = widget.user.name;
+    _phoneNumberController.text = widget.user.phoneNumber;
   }
 
   Future<void> _pickImage() async {
@@ -35,40 +37,37 @@ class _EditUserScreenState extends State<EditUserScreen> {
     });
   }
 
-  Future<void> _editUser() async {
-    if (_nameController.text.isEmpty) return;
+  Future<void> _updateUser() async {
+    if (_nameController.text.isEmpty || _phoneNumberController.text.isEmpty) return;
 
     setState(() {
       _isLoading = true;
     });
 
-    try {
-      String? avatarUrl = widget.user.avatarUrl;
-      if (_image != null) {
-        // Upload new image to Firebase Storage
-        final storageRef = FirebaseStorage.instance.ref().child('avatars/${DateTime.now().toIso8601String()}');
-        final uploadTask = storageRef.putFile(_image!);
-        final snapshot = await uploadTask;
-        avatarUrl = await snapshot.ref.getDownloadURL();
-      }
+    String avatarUrl = widget.user.avatarUrl;
 
-      // Update user in Firestore
-      final updatedUser = User(
-        id: widget.user.id,
-        name: _nameController.text,
-        avatarUrl: avatarUrl!,
-      );
-      await FirebaseFirestore.instance.collection('users').doc(widget.user.id).update(updatedUser.toMap());
-
-      Navigator.of(context).pop();
-    } catch (e) {
-      print('Error editing user: $e');
-      // Show error message to the user
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+    // Upload new image to Firebase Storage if selected
+    if (_image != null) {
+      final storageRef = FirebaseStorage.instance.ref().child('avatars/${DateTime.now().toIso8601String()}');
+      final uploadTask = storageRef.putFile(_image!);
+      final snapshot = await uploadTask;
+      avatarUrl = await snapshot.ref.getDownloadURL();
     }
+
+    // Update user in Firestore
+    final updatedUser = User(
+      id: widget.user.id,
+      name: _nameController.text,
+      avatarUrl: avatarUrl,
+      phoneNumber: _phoneNumberController.text,
+    );
+    await FirebaseFirestore.instance.collection('users').doc(widget.user.id).update(updatedUser.toMap());
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    Navigator.of(context).pop();
   }
 
   @override
@@ -85,22 +84,23 @@ class _EditUserScreenState extends State<EditUserScreen> {
               controller: _nameController,
               decoration: InputDecoration(labelText: 'Name'),
             ),
+            TextField(
+              controller: _phoneNumberController,
+              decoration: InputDecoration(labelText: 'Phone Number'),
+            ),
             SizedBox(height: 16),
             _image == null
-                ? widget.user.avatarUrl.isNotEmpty
                 ? Image.network(widget.user.avatarUrl)
-                : Text('No image selected.')
                 : Image.file(_image!),
             ElevatedButton(
               onPressed: _pickImage,
               child: Text('Pick Image'),
             ),
-            SizedBox(height: 16),
             _isLoading
                 ? CircularProgressIndicator()
                 : ElevatedButton(
-              onPressed: _editUser,
-              child: Text('Save Changes'),
+              onPressed: _updateUser,
+              child: Text('Update User'),
             ),
           ],
         ),

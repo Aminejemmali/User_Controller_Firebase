@@ -38,7 +38,13 @@ dependencies:
   firebase_core: ^2.31.1
   cloud_firestore: 
   firebase_storage: 
-  image_picker: 
+  image_picker:
+
+
+
+  animated_text_kit: ^4.2.2
+  permission_handler: ^11.3.1
+  url_launcher: ^6.2.6
 
 dev_dependencies:
   flutter_test:

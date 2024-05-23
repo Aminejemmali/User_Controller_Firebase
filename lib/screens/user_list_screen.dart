@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:user_crud/models/user.dart';
 import 'package:user_crud/screens/add_user_screen.dart';
 import 'package:user_crud/screens/edit_user_screen.dart';
@@ -33,6 +35,24 @@ class UserListScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('User deleted successfully')));
     }
   }
+
+  Future<void> _callUser(BuildContext context, String phoneNumber) async {
+    final status = await Permission.phone.request();
+    if (status == PermissionStatus.granted) {
+      final Uri launchUri = Uri(
+        scheme: 'tel',
+        path: phoneNumber,
+      );
+      if (launchUri!=0) {
+        await launchUrl(launchUri);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not launch $launchUri')));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Phone permission not granted')));
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -78,9 +98,14 @@ class UserListScreen extends StatelessWidget {
                     user.name,
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
+                  subtitle: Text(user.phoneNumber),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      IconButton(
+                        icon: Icon(Icons.phone, color: Colors.green),
+                        onPressed: () => _callUser(context, user.phoneNumber),
+                      ),
                       IconButton(
                         icon: Icon(Icons.edit, color: Colors.blue),
                         onPressed: () {
